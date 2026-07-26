@@ -1,0 +1,89 @@
+name: Build AmiBroker DLL
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "amibroker/**"
+      - ".github/workflows/build.yaml"
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - "amibroker/**"
+      - ".github/workflows/build.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }} DLL
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: amibroker
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86
+            rust-target: i686-pc-windows-msvc
+          # - arch: x64
+          #   rust-target: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install Rust target
+        shell: powershell
+        run: |
+          rustup set profile minimal
+          rustup default stable
+          rustup target add "${{ matrix.rust-target }}"
+
+      - name: Cache Rust dependencies and build output
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            amibroker/rust-core/target/${{ matrix.rust-target }}
+          key: ${{ runner.os }}-cargo-release-${{ matrix.rust-target }}-${{ hashFiles('amibroker/rust-core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-${{ matrix.rust-target }}-
+
+      - name: Build release DLL
+        shell: powershell
+        run: .\scripts\build.ps1 -Arch "${{ matrix.arch }}"
+
+      - name: Stage DLL
+        shell: powershell
+        run: |
+          $dll = Get-ChildItem `
+            -Path "build-${{ matrix.rust-target }}" `
+            -Recurse `
+            -Filter AmiDataPlugin.dll |
+            Select-Object -First 1
+
+          if (-not $dll) {
+            throw "AmiDataPlugin.dll was not produced for ${{ matrix.arch }}"
+          }
+
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -LiteralPath $dll.FullName -Destination "dist\AmiDataPlugin-${{ matrix.arch }}.dll"
+
+      - name: Upload DLL artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: AmiDataPlugin-${{ matrix.arch }}
+          path: amibroker/dist/AmiDataPlugin-${{ matrix.arch }}.dll
+          if-no-files-found: error
+          retention-days: 7

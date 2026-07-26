@@ -1,0 +1,15 @@
+LIBRARY AmiDataPlugin
+
+EXPORTS
+    GetPluginInfo
+    Init
+    Release
+    Notify
+    GetQuotesEx
+    GetQuotes
+    GetRecentInfo
+    IsBackfillComplete
+    GetSymbolLimit
+    SetTimeBase
+    Configure
+    GetPluginStatus

@@ -1,0 +1,99 @@
+name: Release AmiBroker DLL
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: amibroker
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install Rust targets
+        shell: powershell
+        run: |
+          rustup set profile minimal
+          rustup default stable
+          rustup target add i686-pc-windows-msvc x86_64-pc-windows-msvc
+
+      - name: Restore x86 Rust cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            amibroker/rust-core/target/i686-pc-windows-msvc
+          key: ${{ runner.os }}-cargo-release-i686-pc-windows-msvc-${{ hashFiles('amibroker/rust-core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-i686-pc-windows-msvc-
+
+      - name: Restore x64 Rust cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            amibroker/rust-core/target/x86_64-pc-windows-msvc
+          key: ${{ runner.os }}-cargo-release-x86_64-pc-windows-msvc-${{ hashFiles('amibroker/rust-core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-x86_64-pc-windows-msvc-
+
+      - name: Build x86 and x64 DLLs
+        shell: powershell
+        run: .\scripts\build.ps1 -Arch both
+
+      - name: Stage release assets
+        shell: powershell
+        run: |
+          $targets = @{
+            "i686-pc-windows-msvc" = "x86"
+            "x86_64-pc-windows-msvc" = "x64"
+          }
+
+          New-Item -ItemType Directory -Force -Path dist\release | Out-Null
+          foreach ($target in $targets.GetEnumerator()) {
+            $dll = Get-ChildItem `
+              -Path "build-$($target.Key)" `
+              -Recurse `
+              -Filter AmiDataPlugin.dll |
+              Select-Object -First 1
+
+            if (-not $dll) {
+              throw "AmiDataPlugin.dll was not produced for $($target.Value)"
+            }
+
+            $destination = "dist\release\AmiDataPlugin-$($target.Value).dll"
+            Copy-Item -LiteralPath $dll.FullName -Destination $destination
+            $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path -Leaf $destination)" |
+              Set-Content -Encoding Ascii "$destination.sha256"
+          }
+
+      - name: Publish GitHub release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create $env:RELEASE_TAG `
+            dist/release/* `
+            --generate-notes `
+            --title $env:RELEASE_TAG `
+            --verify-tag
