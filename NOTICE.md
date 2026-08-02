@@ -1,0 +1,28 @@
+# Notices
+
+This project incorporates third-party code and components with their own
+copyright and license terms. Their notices are reproduced here and in the
+license files referenced below.
+
+## AmiBroker ADK
+
+Copyright (C)2001-2019 Tomasz Janeczko, AmiBroker.com.
+
+Users and possessors of this source code are hereby granted a nonexclusive,
+royalty-free copyright license to use this code in individual and commercial
+software.
+
+AMIBROKER.COM MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE CODE
+FOR ANY PURPOSE. IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR IMPLIED WARRANTY OF
+ANY KIND. AMIBROKER.COM DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOURCE
+CODE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE. IN NO EVENT SHALL AMIBROKER.COM BE LIABLE FOR ANY SPECIAL,
+INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER
+RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE
+USE OR PERFORMANCE OF THIS SOURCE CODE.
+
+Any use of this source code must include the above notice, in the user
+documentation and internal comments to the code.
+
+The full license text is available at `amibroker/adk/LICENSE`.
